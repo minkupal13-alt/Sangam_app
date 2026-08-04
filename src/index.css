@@ -1,0 +1,285 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  background-color: #fafaf9;
+  color: #0a0a0a;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html.dark body {
+  background-color: #0b1220;
+  color: #f0f4ff;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Sangam brand gradient utility */
+.bg-sangam-gradient {
+  background: linear-gradient(135deg, #0ea5a4 0%, #ff6b4a 100%);
+}
+.text-sangam-gradient {
+  background: linear-gradient(135deg, #0ea5a4 0%, #ff6b4a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Hide scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Reels snap scrolling */
+.reels-scroll {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.reels-snap {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+html:not(.dark) .skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,0.05) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.05) 75%);
+  background-size: 1000px 100%;
+}
+
+/* Scrollbar styling for desktop */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128,128,128,0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128,128,128,0.5);
+}
+
+/* Pull-to-refresh indicator */
+.ptr-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.ptr-indicator.visible {
+  opacity: 1;
+}
+
+/* Floating heart animation (live streams) */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-180px) scale(1.4);
+    opacity: 0;
+  }
+}
+.animate-floatUp {
+  animation: floatUp 3s ease-out forwards;
+}
+
+/* Image fallback */
+img {
+  background-color: rgba(128, 128, 128, 0.1);
+}
+
+/* Login page animations */
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 30px) scale(1.15); }
+  66% { transform: translate(25px, -25px) scale(0.9); }
+}
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, 30px) scale(1.1); }
+}
+.orb-1 { animation: orbFloat1 20s ease-in-out infinite; }
+.orb-2 { animation: orbFloat2 25s ease-in-out infinite; }
+.orb-3 { animation: orbFloat3 18s ease-in-out infinite; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+  20%, 40%, 60%, 80% { transform: translateX(6px); }
+}
+.animate-shake { animation: shake 0.5s ease-in-out; }
+
+@keyframes checkmarkPop {
+  0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-checkmark { animation: checkmarkPop 0.4s ease-out forwards; }
+
+@keyframes shimmerHover {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-btn {
+  background-image: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+}
+.shimmer-btn:hover {
+  animation: shimmerHover 1.5s linear infinite;
+}
+
+@keyframes typingBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: typingBlink 0.8s step-end infinite;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slideInRight { animation: slideInRight 0.3s ease-out; }
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-scaleIn { animation: scaleIn 0.2s ease-out; }
+
+/* Confetti animation */
+@keyframes confettiFall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  z-index: 100;
+  animation: confettiFall linear forwards;
+}
+
+/* Onboarding step transition */
+@keyframes stepSlideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-stepIn { animation: stepSlideIn 0.3s ease-out; }
+
+@keyframes welcomePop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-welcomePop { animation: welcomePop 0.6s ease-out forwards; }
+
+/* Heart burst animation for like button */
+@keyframes heartBurst {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+.animate-heartBurst { animation: heartBurst 0.6s ease-out forwards; }
+
+/* Floating label input */
+.float-input {
+  transition: all 0.2s ease;
+}
+.float-input:focus + .float-label,
+.float-input:not(:placeholder-shown) + .float-label {
+  transform: translateY(-12px) scale(0.85);
+  color: #0ea5a4;
+}
+.float-label {
+  position: absolute;
+  left: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: all 0.2s ease;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Lazy blur placeholder for images */
+.lazy-blur {
+  filter: blur(8px);
+  transition: filter 0.3s ease;
+}
+.lazy-blur.loaded {
+  filter: blur(0);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slideUp { animation: slideUp 0.3s ease-out; }
+
+@keyframes heartBurst {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+.animate-heartBurst { animation: heartBurst 0.6s ease-out; }
+
+.reels-scroll {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.reels-snap {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}

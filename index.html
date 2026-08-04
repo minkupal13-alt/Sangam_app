@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0ea5a4" />
+    <meta name="description" content="Sangam — Everything. One Sangam. Connect, share, and discover posts, flicks, videos, and conversations all in one place." />
+    <title>Sangam — Everything. One Sangam.</title>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sangam — Everything. One Sangam." />
+    <meta property="og:description" content="Connect, share, and discover posts, flicks, videos, and conversations all in one place." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+    <meta property="og:site_name" content="Sangam" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sangam — Everything. One Sangam." />
+    <meta name="twitter:description" content="Connect, share, and discover posts, flicks, videos, and conversations all in one place." />
+    <meta name="twitter:image" content="/icons/icon-512.png" />
+
+    <!-- Prevent dark mode flash -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem('theme');
+        var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = stored ? stored === 'dark' : (systemDark || true);
+        if (isDark) document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
