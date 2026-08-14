@@ -21,6 +21,7 @@ import ShareSheet from '@/components/ShareSheet';
 import EditProfileModal from '@/components/EditProfileModal';
 import FollowersFollowingModal from '@/components/FollowersFollowingModal';
 import QRCodeModal from '@/components/QRCodeModal';
+import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import type { Profile, Post, BioLink, StoryHighlight, BookmarkCollection } from '@/lib/types';
 import { formatCount, timeAgo } from '@/lib/format';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -53,6 +54,8 @@ export default function ProfilePage() {
   const [listModal, setListModal] = useState<{ open: boolean; mode: 'followers' | 'following' }>({ open: false, mode: 'followers' });
   const [showFollowMenu, setShowFollowMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showOwnMenu, setShowOwnMenu] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [bioLinks, setBioLinks] = useState<BioLink[]>([]);
   const [highlights, setHighlights] = useState<StoryHighlight[]>([]);
   const [points, setPoints] = useState({ points: 0, level: 1 });
@@ -175,13 +178,13 @@ export default function ProfilePage() {
   // Close menus on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) { setShowMoreMenu(false); setShowFollowMenu(false); }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) { setShowMoreMenu(false); setShowFollowMenu(false); setShowOwnMenu(false); }
     }
-    if (showMoreMenu || showFollowMenu) {
+    if (showMoreMenu || showFollowMenu || showOwnMenu) {
       document.addEventListener('mousedown', handleClick);
       return () => document.removeEventListener('mousedown', handleClick);
     }
-  }, [showMoreMenu, showFollowMenu]);
+  }, [showMoreMenu, showFollowMenu, showOwnMenu]);
 
   async function handleFollow() {
     if (!myProfile || !profile) return;
@@ -292,6 +295,17 @@ export default function ProfilePage() {
                 <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/u/${profile.username}`).catch(() => {}); }} className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-300 dark:border-navy-50 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-navy-300 transition-colors">
                   <Share2 className="h-4 w-4" /> {t('profile.shareProfile')}
                 </button>
+                <div className="relative" ref={moreMenuRef}>
+                  <button onClick={() => setShowOwnMenu((v) => !v)} aria-label="More options" className="h-9 w-9 rounded-full border border-gray-300 dark:border-navy-50 flex items-center justify-center text-gray-700 dark:text-gray-300">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                  {showOwnMenu && (
+                    <div className="absolute top-full mt-1 right-0 w-44 rounded-xl bg-white dark:bg-navy-200 shadow-xl border border-gray-100 dark:border-navy-300 py-1 z-30 animate-scaleIn">
+                      <MoreMenuItem label="Settings" onClick={() => { setShowOwnMenu(false); navigate('/settings'); }} />
+                      <MoreMenuItem label="Logout" onClick={() => { setShowOwnMenu(false); setLogoutOpen(true); }} danger />
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -581,6 +595,7 @@ export default function ProfilePage() {
       )}
       <FollowersFollowingModal open={listModal.open} onClose={() => setListModal({ open: false, mode: listModal.mode })} userId={profile.id} mode={listModal.mode} />
       <QRCodeModal open={qrOpen} onClose={() => setQrOpen(false)} profile={profile} />
+      <LogoutConfirmModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
       <CommentSheet post={commentPost} onClose={() => setCommentPost(null)} />
       <ShareSheet post={sharePost} onClose={() => setSharePost(null)} />
     </div>

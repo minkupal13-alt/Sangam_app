@@ -20,6 +20,7 @@ import { setLanguage, LANGUAGES } from '@/lib/i18n';
 import { useAuthStore } from '@/lib/authStore';
 import { supabase } from '@/lib/supabase';
 import { fetchBlockedUsers, fetchMutedUsers, blockUser, muteUser, unblockUser, unmuteUser } from '@/lib/safetyApi';
+import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import type { Profile } from '@/lib/types';
 
 type SettingsCategory = 'account' | 'privacy' | 'notifications' | 'appearance' | 'accessibility' | 'security' | 'content' | 'blocked';
@@ -28,8 +29,8 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
-  const signOut = useAuthStore((s) => s.signOut);
   const { theme, toggle } = useThemeStore();
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('appearance');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xl'>(() => {
     return (localStorage.getItem('sangam_font_size') as 'small' | 'medium' | 'large' | 'xl') || 'medium';
@@ -369,13 +370,15 @@ export default function SettingsPage() {
             <ChevronRight className="h-4 w-4 text-gray-400" />
           </button>
           <button
-            onClick={() => signOut()}
+            onClick={() => setLogoutOpen(true)}
             className="w-full flex items-center justify-between p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
           >
             <span className="text-sm font-semibold text-red-500">Logout</span>
           </button>
         </div>
       </div>
+
+      <LogoutConfirmModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
     </div>
   );
 }
