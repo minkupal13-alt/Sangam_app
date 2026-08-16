@@ -38,6 +38,8 @@ import { useAuthStore } from '@/lib/authStore';
 import SangamLogo from '@/components/SangamLogo';
 import SearchBar from '@/components/SearchBar';
 import GoLiveModal from '@/components/GoLiveModal';
+import FloatingMenu from '@/components/FloatingMenu';
+import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import type { NavKey } from '@/lib/navTypes';
 
 interface AppLayoutProps {
@@ -76,9 +78,9 @@ export default function AppLayout({ children, onCreate, notificationCount }: App
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const profile = useAuthStore((s) => s.profile);
-  const signOut = useAuthStore((s) => s.signOut);
   const navigate = useNavigate();
   const [goLiveOpen, setGoLiveOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#fafaf9] dark:bg-[#0b1220] text-gray-900 dark:text-white">
@@ -182,11 +184,9 @@ export default function AppLayout({ children, onCreate, notificationCount }: App
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           <button
-            onClick={async () => {
-              await signOut();
-              navigate('/login');
-            }}
-            className="h-9 w-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-navy-200"
+            onClick={() => setLogoutOpen(true)}
+            aria-label="Logout"
+            className="h-9 w-9 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             <LogOut className="h-5 w-5" />
           </button>
@@ -204,6 +204,14 @@ export default function AppLayout({ children, onCreate, notificationCount }: App
         >
           <Settings className="h-5 w-5" />
           <span>Settings</span>
+        </button>
+
+        <button
+          onClick={() => setLogoutOpen(true)}
+          className="hidden lg:flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 w-full transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Logout</span>
         </button>
 
         {(profile?.role === 'admin' || profile?.role === 'superadmin') && (
@@ -246,6 +254,11 @@ export default function AppLayout({ children, onCreate, notificationCount }: App
           <MobileNav to="/profile" icon={<User className="h-6 w-6" />} />
         </div>
       </nav>
+
+      {/* Right-side floating menu */}
+      <FloatingMenu />
+
+      <LogoutConfirmModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
     </div>
   );
 }

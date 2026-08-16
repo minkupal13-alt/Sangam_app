@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Sparkles, Zap, Search, Bell, ArrowUp, Plus } from 'lucide-react';
+import { Loader2, Sparkles, Zap, Search, Bell, ArrowUp, Plus, UserPlus, Check, Users, Compass } from 'lucide-react';
 import PostCard from '@/components/PostCard';
 import PostCardSkeleton from '@/components/PostCardSkeleton';
 import CommentSheet from '@/components/CommentSheet';
@@ -481,7 +481,15 @@ export default function HomeFeed() {
               <PostCardSkeleton />
             </div>
           ) : posts.length === 0 ? (
-            <EmptyState feed={feed} onExplore={() => navigate('/explore/people')} onCreate={openCreate} t={t} />
+            <EmptyState
+              feed={feed}
+              profileId={profile?.id}
+              onExplore={() => navigate('/explore/people')}
+              onCreate={openCreate}
+              onFollowed={loadInitial}
+              onOpenProfile={(username) => navigate(`/u/${username}`)}
+              t={t}
+            />
           ) : (
             renderMixedFeed()
           )}
@@ -540,40 +548,152 @@ function FeedTab({ active, onClick, icon, label }: { active: boolean; onClick: (
 
 function EmptyState({
   feed,
+  profileId,
   onExplore,
   onCreate,
+  onFollowed,
+  onOpenProfile,
   t,
 }: {
   feed: 'forYou' | 'following';
+  profileId?: string;
   onExplore: () => void;
   onCreate: () => void;
+  onFollowed: () => void;
+  onOpenProfile: (username: string) => void;
   t: (key: string) => string;
 }) {
+  const [suggestions, setSuggestions] = useState<{ profile: Profile; mutualCount: number }[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [followingBusy, setFollowingBusy] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!profileId) {
+      setSuggestionsLoading(false);
+      return;
+    }
+    setSuggestionsLoading(true);
+    fetchSuggestedUsers(profileId, 8)
+      .then((data) => { if (!cancelled) setSuggestions(data); })
+      .catch(() => { if (!cancelled) setSuggestions([]); })
+      .finally(() => { if (!cancelled) setSuggestionsLoading(false); });
+    return () => { cancelled = true; };
+  }, [profileId]);
+
+  async function handleFollow(targetId: string) {
+    if (!profileId || followedIds.has(targetId) || followingBusy.has(targetId)) return;
+    setFollowingBusy((prev) => new Set([...prev, targetId]));
+    const { error } = await supabase
+      .from('follows')
+      .insert({ follower_id: profileId, following_id: targetId });
+    setFollowingBusy((prev) => { const n = new Set(prev); n.delete(targetId); return n; });
+    if (!error) {
+      setFollowedIds((prev) => new Set([...prev, targetId]));
+      // Reload the feed so the newly followed user's posts appear.
+      onFollowed();
+    }
+  }
+
   return (
-    <div className="text-center py-20 px-4">
-      <div className="text-5xl mb-4">🎉</div>
-      <h2 className="font-heading text-xl font-bold text-gray-900 dark:text-white mb-1">
-        {t('feed.welcomeToSangam')}
-      </h2>
-      <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-        {feed === 'following'
-          ? t('feed.followPeople')
-          : t('feed.followPeople')}
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <button
-          onClick={onExplore}
-          className="px-5 py-2.5 rounded-full bg-sangam-gradient text-white text-sm font-semibold active:scale-95 transition-transform shadow-md shadow-coral-500/20"
-        >
-          {t('feed.explorePeople')}
-        </button>
-        <button
-          onClick={onCreate}
-          className="px-5 py-2.5 rounded-full bg-gray-100 dark:bg-navy-300 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-navy-400 transition-colors"
-        >
-          {t('feed.createPost')}
-        </button>
+    <div className="py-10 px-4">
+      <div className="text-center">
+        <div className="text-5xl mb-4">🎉</div>
+        <h2 className="font-heading text-xl font-bold text-gray-900 dark:text-white mb-1">
+          {t('feed.welcomeToSangam')}
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-balance max-w-md mx-auto">
+          {t('feed.followPeople')}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={onExplore}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-sangam-gradient text-white text-sm font-semibold active:scale-95 transition-transform shadow-md shadow-coral-500/20"
+          >
+            <Compass className="h-4 w-4" />
+            {t('feed.explorePeople')}
+          </button>
+          <button
+            onClick={onCreate}
+            className="px-5 py-2.5 rounded-full bg-gray-100 dark:bg-navy-300 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-200 dark:hover:bg-navy-400 transition-colors"
+          >
+            {t('feed.createPost')}
+          </button>
+        </div>
       </div>
+
+      {/* Suggested users */}
+      {(suggestionsLoading || suggestions.length > 0) && (
+        <div className="mt-10 max-w-md mx-auto">
+          <h3 className="font-heading font-bold text-base text-gray-900 dark:text-white mb-3">
+            {t('feed.explorePeople')}
+          </h3>
+          {suggestionsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-navy-200 border border-gray-100 dark:border-navy-300">
+                  <div className="h-11 w-11 rounded-full skeleton" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-32 rounded skeleton" />
+                    <div className="h-3 w-20 rounded skeleton" />
+                  </div>
+                  <div className="h-8 w-20 rounded-full skeleton" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {suggestions.map(({ profile: p, mutualCount }) => {
+                const isFollowed = followedIds.has(p.id);
+                const isBusy = followingBusy.has(p.id);
+                return (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-navy-200 border border-gray-100 dark:border-navy-300"
+                  >
+                    <img
+                      src={p.avatar_url || `https://ui-avatars.com/api/?name=${p.full_name}`}
+                      alt=""
+                      onClick={() => onOpenProfile(p.username)}
+                      className="h-11 w-11 rounded-full object-cover cursor-pointer flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => onOpenProfile(p.username)}
+                        className="block text-start font-semibold text-sm text-gray-900 dark:text-white truncate hover:underline max-w-full"
+                      >
+                        {p.full_name}
+                      </button>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {mutualCount > 0 ? `${mutualCount} mutual` : `${p.followers_count} followers`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleFollow(p.id)}
+                      disabled={isFollowed || isBusy}
+                      className={`flex items-center justify-center gap-1 px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 flex-shrink-0 ${
+                        isFollowed
+                          ? 'bg-gray-200 dark:bg-navy-300 text-gray-500'
+                          : 'bg-sangam-gradient text-white shadow-sm shadow-coral-500/20'
+                      }`}
+                    >
+                      {isBusy ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : isFollowed ? (
+                        <><Check className="h-3 w-3" /> {t('profile.following')}</>
+                      ) : (
+                        <><UserPlus className="h-3 w-3" /> {t('profile.follow')}</>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
