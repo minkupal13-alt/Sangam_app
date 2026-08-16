@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Room, RoomEvent, Track, type RemoteTrack, type LocalTrack } from 'livekit-client';
 import {
   Heart,
   Send,
@@ -39,10 +40,14 @@ export default function LiveStreamPage() {
   const [sending, setSending] = useState(false);
   const [hearts, setHearts] = useState<FloatingHeart[]>([]);
   const [ending, setEnding] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoConnected, setVideoConnected] = useState(false);
   const unsubCommentsRef = useRef<ReturnType<typeof subscribeToLiveComments> | null>(null);
   const unsubViewersRef = useRef<ReturnType<typeof subscribeToViewerCount> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const heartIdRef = useRef(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const roomRef = useRef<Room | null>(null);
 
   usePageTitle(stream?.title ? `${stream.title} | Sangam` : 'Live | Sangam');
 
@@ -59,6 +64,70 @@ export default function LiveStreamPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
+
+  useEffect(() => {
+    if (!stream || !id || !profile) return;
+
+    const isHostForVideo = stream.user_id === profile.id;
+    let cancelled = false;
+    const room = new Room();
+    roomRef.current = room;
+
+    async function connect() {
+      try {
+        const res = await fetch('/api/livekit-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomName: `live-${id}`,
+            participantName: profile.username || profile.id,
+            role: isHostForVideo ? 'host' : 'viewer',
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'लाइव कनेक्ट नहीं हो सका');
+        }
+        const { token, url } = await res.json();
+        if (cancelled) return;
+
+        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Video && videoRef.current) {
+            track.attach(videoRef.current);
+          }
+        });
+        room.on(RoomEvent.Disconnected, () => {
+          if (!cancelled) setVideoConnected(false);
+        });
+
+        await room.connect(url, token);
+        if (cancelled) return;
+
+        if (isHostForVideo) {
+          await room.localParticipant.setCameraEnabled(true);
+          await room.localParticipant.setMicrophoneEnabled(true);
+          const camPub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+          const localTrack = camPub?.track as LocalTrack | undefined;
+          if (localTrack && videoRef.current) {
+            localTrack.attach(videoRef.current);
+          }
+        }
+        setVideoConnected(true);
+      } catch (err) {
+        if (!cancelled) {
+          setVideoError(err instanceof Error ? err.message : 'लाइव कनेक्ट नहीं हो सका');
+        }
+      }
+    }
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      room.disconnect();
+      roomRef.current = null;
+    };
+  }, [stream, id, profile]);
 
   async function loadStream() {
     if (!id) return;
@@ -116,6 +185,7 @@ export default function LiveStreamPage() {
     if (!confirm('End this live stream?')) return;
     setEnding(true);
     try {
+      roomRef.current?.disconnect();
       await endLiveStream(id);
       unsubCommentsRef.current?.unsubscribe();
       unsubViewersRef.current?.unsubscribe();
@@ -153,34 +223,37 @@ export default function LiveStreamPage() {
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col sm:flex-row z-50">
-      {/* Video area */}
       <div
         className="relative flex-1 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center overflow-hidden"
         onClick={handleSendHeart}
       >
-        {/* Video / placeholder */}
-        {stream.replay_url ? (
-          <video
-            src={stream.replay_url}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="max-h-full max-w-full object-contain"
-          />
-        ) : (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted={isHost}
+          playsInline
+          className={`max-h-full max-w-full object-contain ${videoConnected ? '' : 'hidden'}`}
+        />
+
+        {!videoConnected && (
           <div className="text-center px-4">
-            <div className="h-24 w-24 rounded-full bg-sangam-gradient mx-auto flex items-center justify-center mb-4">
-              <Video className="h-12 w-12 text-white" />
-            </div>
-            <p className="text-white font-heading font-bold text-lg">{stream.title}</p>
-            <p className="text-gray-400 text-sm mt-1">
-              by @{stream.author?.username || 'host'}
-            </p>
+            {videoError ? (
+              <p className="text-white/80 text-sm">{videoError}</p>
+            ) : (
+              <>
+                <div className="h-24 w-24 rounded-full bg-sangam-gradient mx-auto flex items-center justify-center mb-4">
+                  <Video className="h-12 w-12 text-white animate-pulse" />
+                </div>
+                <p className="text-white font-heading font-bold text-lg">{stream.title}</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  by @{stream.author?.username || 'host'}
+                </p>
+                <p className="text-gray-500 text-xs mt-2">जुड़ रहे हैं…</p>
+              </>
+            )}
           </div>
         )}
 
-        {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-full bg-red-500 text-white text-xs font-bold flex items-center gap-1.5">
@@ -200,7 +273,6 @@ export default function LiveStreamPage() {
           </button>
         </div>
 
-        {/* Host info */}
         <div className="absolute bottom-4 left-4 flex items-center gap-2">
           <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-700 border-2 border-white/30">
             {stream.author?.avatar_url ? (
@@ -225,7 +297,6 @@ export default function LiveStreamPage() {
           </div>
         </div>
 
-        {/* Floating hearts */}
         <div className="absolute bottom-20 right-8 pointer-events-none">
           {hearts.map((h) => (
             <Heart
@@ -239,7 +310,6 @@ export default function LiveStreamPage() {
           ))}
         </div>
 
-        {/* Heart button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -250,7 +320,6 @@ export default function LiveStreamPage() {
           <Heart className="h-6 w-6 text-white fill-white" />
         </button>
 
-        {/* End stream (host only) */}
         {isHost && (
           <button
             onClick={handleEndStream}
@@ -263,9 +332,7 @@ export default function LiveStreamPage() {
         )}
       </div>
 
-      {/* Chat sidebar */}
       <div className="w-full sm:w-80 bg-white dark:bg-navy-200 flex flex-col h-64 sm:h-auto border-t sm:border-t-0 sm:border-l border-gray-200 dark:border-navy-300">
-        {/* Chat header */}
         <div className="px-4 py-3 border-b border-gray-100 dark:border-navy-300 flex items-center justify-between">
           <h2 className="font-heading font-bold text-sm text-gray-900 dark:text-white">
             Live Chat
@@ -273,7 +340,6 @@ export default function LiveStreamPage() {
           <span className="text-xs text-gray-400">{formatCount(viewerCount)} watching</span>
         </div>
 
-        {/* Comments */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
           {comments.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">
@@ -314,7 +380,6 @@ export default function LiveStreamPage() {
           <div ref={chatEndRef} />
         </div>
 
-        {/* Comment input */}
         <form
           onSubmit={handleSendComment}
           className="p-3 border-t border-gray-100 dark:border-navy-300 flex items-center gap-2"
@@ -341,4 +406,4 @@ export default function LiveStreamPage() {
       </div>
     </div>
   );
-}
+      }
